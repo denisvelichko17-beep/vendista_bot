@@ -1,7 +1,6 @@
 import os
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
 
 TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CHAT_ID = os.environ.get('CHAT_ID')
@@ -13,39 +12,51 @@ def send_telegram(msg):
     requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"})
 
 def main():
-    response = requests.get(URL, headers=HEADERS)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    rows = soup.find_all('tr')
-    
-    # Файл для хранения времени последней увиденной транзакции
-    last_time_file = "last_time.txt"
-    last_time = ""
-    if os.path.exists(last_time_file):
-        with open(last_time_file, "r") as f: last_time = f.read().strip()
-
-    new_tx = []
-    total_sum = 0
-    
-    # Парсим (настройте индексы cols, если время/сумма не в 1 и 3 столбце)
-    for row in rows[1:6]:
-        cols = row.find_all('td')
-        if len(cols) > 3:
-            time = cols[1].text.strip()
-            # Берем сумму из вашей ячейки <td> 159,00 ₽ </td>
-            amount_str = cols[3].text.replace('₽', '').replace(',', '.').strip()
-            amount = float(amount_str)
-            
-            if time == last_time: break
-            
-            new_tx.append(f"🛒 <b>Сумма:</b> {amount} ₽")
-            total_sum += amount
-
-    if new_tx:
-        # Обновляем время последней транзакции
-        with open(last_time_file, "w") as f: f.write(rows[1].find_all('td')[1].text.strip())
+    try:
+        response = requests.get(URL, headers=HEADERS)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        rows = soup.find_all('tr')
         
-        msg = f"💰 <b>Новая продажа!</b>\n📅 {datetime.now().strftime('%d.%m %H:%M')}\n\n" + "\n".join(new_tx)
-        send_telegram(msg)
+        # Файлы для «памяти»
+        last_time_file = "last_time.txt"
+        cash_file = "cash.txt"
+        
+        last_time = ""
+        if os.path.exists(last_time_file):
+            with open(last_time_file, "r") as f: last_time = f.read().strip()
+        
+        current_cash = 0.0
+        if os.path.exists(cash_file):
+            with open(cash_file, "r") as f: current_cash = float(f.read().strip())
+
+        # Читаем первую строку
+        first_row = rows[1]
+        cols = first_row.find_all('td')
+        
+        full_date = cols[2].text.strip() # 06.06.2026 17:42:30
+        amount_text = cols[4].text.replace('₽', '').replace(',', '.').strip()
+        amount = float(amount_text)
+        
+        # Форматируем дату для сообщения
+        date_short = full_date[0:5] # 06.06
+        time_short = full_date[11:16] # 17:42
+
+        if full_date != last_time:
+            current_cash += amount
+            
+            msg = (f"💰 <b>Продажа</b>\n"
+                   f"📅 {date_short} 🕑 {time_short}\n"
+                   f"🛒 <b>Сумма продажи:</b> {int(amount)} ₽\n\n"
+                   f"🏦 <b>Касса:</b> {int(current_cash)} ₽")
+            
+            send_telegram(msg)
+            
+            # Сохраняем новые данные в файлы
+            with open(last_time_file, "w") as f: f.write(full_date)
+            with open(cash_file, "w") as f: f.write(str(current_cash))
+            
+    except Exception as e:
+        print(f"Ошибка: {e}")
 
 if __name__ == "__main__":
     main()
