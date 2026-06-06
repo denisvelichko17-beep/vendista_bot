@@ -1,9 +1,8 @@
-Python
 import os
 import requests
 
 # Собираем куки из двух секретов
-cookies = os.environ['COOKIE_PART1'] + os.environ['COOKIE_PART2']
+cookies = os.environ.get('COOKIE_PART1', '') + os.environ.get('COOKIE_PART2', '')
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
