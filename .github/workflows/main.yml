@@ -1,0 +1,23 @@
+name: Check Vendista
+on:
+  schedule:
+    - cron: '*/10 * * * *' # Запуск каждые 10 минут
+  workflow_dispatch: # Позволяет запустить бота вручную кнопкой
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install requests
+        run: pip install requests
+      - name: Run script
+        run: python main.py
+        env:
+          COOKIE_PART1: ${{ secrets.COOKIE_PART1 }}
+          COOKIE_PART2: ${{ secrets.COOKIE_PART2 }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
