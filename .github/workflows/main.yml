@@ -7,6 +7,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - name: Cache data
+        uses: actions/cache@v3
+        with:
+          path: |
+            last_time.txt
+            cash.txt
+          key: vendista-data-v1
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v4
