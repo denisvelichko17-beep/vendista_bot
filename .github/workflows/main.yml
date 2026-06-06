@@ -7,20 +7,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Cache data
+      - uses: actions/checkout@v4
+      
+      - name: Load data
         uses: actions/cache@v3
         with:
           path: |
             last_time.txt
             cash.txt
           key: vendista-data-v1
-      - uses: actions/checkout@v4
+          
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+          
       - name: Install dependencies
         run: pip install requests beautifulsoup4
+        
       - name: Run script
         run: python main.py
         env:
@@ -28,3 +32,11 @@ jobs:
           COOKIE_PART2: ${{ secrets.COOKIE_PART2 }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
+          
+      - name: Save data
+        uses: actions/cache@v3
+        with:
+          path: |
+            last_time.txt
+            cash.txt
+          key: vendista-data-v1
