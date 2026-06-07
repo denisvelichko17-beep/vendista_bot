@@ -1,42 +1,50 @@
 name: Check Vendista
+
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: "*/10 * * * *"
   workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
-  build:
+  check-sales:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Load data
-        uses: actions/cache@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          path: |
-            last_time.txt
-            cash.txt
-          key: vendista-data-v1
-          
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-          
+          python-version: "3.11"
+
       - name: Install dependencies
-        run: pip install requests beautifulsoup4
-        
-      - name: Run script
-        run: python main.py
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Create files if missing
+        run: |
+          touch last_time.txt
+          touch cash.txt
+
+      - name: Run bot
         env:
           COOKIE_PART1: ${{ secrets.COOKIE_PART1 }}
           COOKIE_PART2: ${{ secrets.COOKIE_PART2 }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-          
-      - name: Save data
-        uses: actions/cache@v3
-        with:
-          path: |
-            last_time.txt
-            cash.txt
-          key: vendista-data-v1
+        run: python main.py
+
+      - name: Commit updated data
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+
+          git add last_time.txt cash.txt
+
+          git diff --staged --quiet || git commit -m "update cash data"
+
+          git push
