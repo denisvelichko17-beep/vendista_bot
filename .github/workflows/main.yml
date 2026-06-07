@@ -9,28 +9,21 @@ permissions:
   contents: write
 
 jobs:
-  check-sales:
+  run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          pip install requests beautifulsoup4
+      - name: Install
+        run: pip install requests beautifulsoup4
 
-      - name: Create files if missing
-        run: |
-          touch last_time.txt
-          touch cash.txt
-
-      - name: Run bot
+      - name: Run
         env:
           COOKIE_PART1: ${{ secrets.COOKIE_PART1 }}
           COOKIE_PART2: ${{ secrets.COOKIE_PART2 }}
@@ -38,13 +31,10 @@ jobs:
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python main.py
 
-      - name: Commit updated data
+      - name: Save state
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-
-          git add last_time.txt cash.txt
-
-          git diff --staged --quiet || git commit -m "update cash data"
-
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add state.json
+          git commit -m "update" || exit 0
           git push
