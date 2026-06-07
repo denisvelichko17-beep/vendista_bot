@@ -20,7 +20,7 @@ STATE_FILE = "state.json"
 def load_state():
     if os.path.exists(STATE_FILE):
         return json.load(open(STATE_FILE, "r", encoding="utf-8"))
-    return {"seen": [], "cash": 0.0, "date": ""}
+    return {"last_marker": "", "cash": 0.0, "date": ""}
 
 
 def save_state(state):
@@ -43,11 +43,14 @@ def main():
     if state["date"] != today:
         state["date"] = today
         state["cash"] = 0.0
-        state["seen"] = []
+        state["last_marker"] = ""
 
     r = requests.get(URL, headers=HEADERS, timeout=30)
     soup = BeautifulSoup(r.text, "html.parser")
     rows = soup.find_all("tr")
+
+    if len(rows) < 2:
+        return
 
     new_sales = []
 
@@ -57,28 +60,28 @@ def main():
             continue
 
         t = cols[2].text.strip()
-        amount = cols[4].text.replace("₽", "").replace(" ", "").replace(",", ".").strip()
+        amount_raw = cols[4].text.replace("₽", "").replace(" ", "").replace(",", ".").strip()
 
         try:
-            amount = float(amount)
+            amount = float(amount_raw)
         except:
             continue
 
-        sale_id = f"{t}_{amount}"
+        marker = f"{t}|{amount}"
 
-        if sale_id in state["seen"]:
-            continue
+        # 🔥 стоп-условие (главный фикс)
+        if marker == state["last_marker"]:
+            break
 
-        new_sales.append((sale_id, t, amount))
+        new_sales.append((marker, t, amount))
 
     if not new_sales:
         return
 
     new_sales.reverse()
 
-    for sale_id, t, amount in new_sales:
+    for marker, t, amount in new_sales:
         state["cash"] += amount
-        state["seen"].append(sale_id)
 
         send_telegram(
             f"💰 <b>Продажа</b>\n"
@@ -87,7 +90,8 @@ def main():
             f"🏦 Касса: {int(state['cash'])} ₽"
         )
 
-    state["seen"] = state["seen"][-500:]
+        state["last_marker"] = marker
+
     save_state(state)
 
 
